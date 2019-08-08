@@ -41,24 +41,49 @@ class simulate_rate_diff:
         df.loc[:(self.success_est*days)-1,'success'] = 1
         return df
 
-    def get_rate_diff(self, df, split, **kwargs):
+    def divide_data(self, df, split, **kwargs):
         '''Given a dataframe of samples and their successes, 
-        split it and compute the difference in success ratio
+        split it according to split parameter
         
         Args:
             df (pandas.DataFrame): dataframe containing samples and their successes
-            split (float): ratio for A/B test, a split of 0.6 means that the simulated control 
-            would get 60% of the data
+            split (list of floats): list of floats representing the proportion of data for the control first then all the variations, must sum to one
 
         Returns:
-            flaot: absolute value of the difference in success rates
+            list: splits of `df`, of length `splits`
         '''
-        control, variation = train_test_split(df, test_size=split, **kwargs)
-        control_rate = control.success.sum()/control.shape[0]
-        variation_rate = variation.success.sum()/variation.shape[0]
-        return abs(control_rate-variation_rate)
+        if 'seed' in kwargs:
+            np.random.seed(kwargs['seed'])
+        if sum(split) != 1 or not isinstance(split, list):
+            logger.debug('split must be a list of floats summing to one, control is at index 0')
+            raise ValueError
+        df_lens = [int(x*len(df)) for x in split]
+        del df_lens[-1]
+        df_indexes = np.cumsum(df_lens)
+        df_indexs = [x+1 if ind > 0 else x for ind, x in enumerate(df_indexes)]
+        df_splits = np.split(df.sample(frac=1), df_indexes)
+        return df_splits 
 
-    def simulate_sampling(self, df, split, iterations = 1000):
+    def get_ratio_diff(self, df_splits):
+        '''Give a list of dataframes containing samples and their successes, 
+        compute the absolute value of the difference between the control success ratio and each variant
+
+        Args:
+            df_splits (list): list of pandas.DataFrame's, dataframe at index 0 represents the control, all subsequest dataframes are variants
+
+        Returns:
+            list: list of floats representing the absolute value of the success ratios of the control vs each variant. Of length splits-1
+        '''
+        diffs = []
+        control = df_splits.pop(0)
+        for i in range(len(df_splits)):
+            variation = df_splits.pop(0)
+            control_rate = control.success.sum()/control.shape[0]
+            variation_rate = variation.success.sum()/variation.shape[0]
+            diffs.append(abs(round(control_rate-variation_rate, 6)))
+        return diffs
+
+    def simulate_sampling(self, df, split, iterations):
         '''Sample from the simulated data
 
         Args:
@@ -67,22 +92,30 @@ class simulate_rate_diff:
             iterations (int): number of simulations 
 
         Returns:
-            max_diff (float): maximum success ratio difference observed 
+            max_diff (float): maximum success ratio difference observed
             median_diff (float): median success ratio difference observed
         '''
         logger.debug('Sampling data ... \n')
-        max_diff = 0.0
-        total_diff = 0.0
+        max_diff = [0.0]*(len(split)-1)
+        total_diff = [0.0]*(len(split)-1)
         for i in range(iterations):
-            diff = self.get_rate_diff(df, split)
-            total_diff += diff
-            if diff > max_diff:
-                max_diff = diff
+            diffs = self.get_ratio_diff(self.divide_data(df = df, split = split, seed = i))
+            total_diff = [x + y for x, y in zip(total_diff, diffs)]
+            max_diff = [y if y > x else x for x, y in zip(max_diff, diffs)]
 
-        median_diff = round(total_diff/iterations, 6)
-        max_diff = round(max_diff, 6)
-        logger.info('Maximum difference observed = {}'.format(max_diff))
-        logger.info('Medium difference observed = {}'.format(median_diff))
+        median_diff = [x/iterations for x in total_diff]
+        median_diff = [round(x, 6) for x in median_diff]
+        max_diff = [round(x, 6) for x in max_diff]
+
+        variation = 1
+        for diff in zip(max_diff, median_diff):
+            logger.info('''\tFor Variation {var}:\n 
+            Maximum difference observed = {max_diff}
+            Median difference observed = {med_diff}\n'''.format(
+                var = variation, max_diff = diff[0], med_diff = diff[1]
+                )
+            )
+            variation += 1
         return max_diff, median_diff
 
 

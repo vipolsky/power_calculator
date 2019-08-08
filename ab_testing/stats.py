@@ -14,12 +14,12 @@ class base:
         self.nB = nB                            #control sample size
         self.alpha = alpha                      #type I error rate
         self.power = power                      #power, 1-type II error 
-        self.samples_per_day = samples_per_day  #samples per day
+        self.samples_per_day = samples_per_day  #total samples per day
 
     def calc_power(self):
         logger.info('Calculating power...')
-        try: 
-            nA = self.kappa*self.nB    
+        try:
+            nA = self.kappa*self.nB
             z = (self.pA-self.pB-self.delta)/ (self.pA*(1-self.pA)/nA + self.pB*(1-self.pB)/self.nB)**(.5)
             power = norm.cdf(z-norm.ppf(1-self.alpha))+norm.cdf(-z-norm.ppf(1-self.alpha))
             power = round(power, 6)
@@ -47,7 +47,7 @@ class base:
             logger.info('''\n
                     Significance =\t{0}%
                     Absolute delta =\t{1}
-                    Power =\t{2}%\n
+                    Power =\t\t{2}%\n
                     {3} samples total, {4} days\n'''.format(
                         int((1-self.alpha)*100), 
                         self.delta, 
@@ -66,7 +66,6 @@ class non_inferiority(base):
             logger.debug('delta value must be negative for a non-inferiority test')
             raise ValueError
         else:
-            logger.info('\nRunning non-inferiority power calculation\n')
             base.__init__(self, delta, pA, pB, kappa, nB, alpha, power, samples_per_day)
 
 class superiority(base):
@@ -75,6 +74,5 @@ class superiority(base):
             logger.debug('delta value must be positive for a non-inferiority test')
             raise ValueError
         else:
-            logger.info('\nRunning superiority power calculation\n')
             base.__init__(self, delta, pA, pB, kappa, nB, alpha, power, samples_per_day)
 
