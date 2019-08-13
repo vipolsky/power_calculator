@@ -7,24 +7,17 @@ from ab_testing import utils
 logger = utils.setup_logger(__name__)
 
 class simulate_rate_diff:
-    def __init__(self, sample_def, success_def):
+    def __init__(self, metric):
         self.db = DataWarehouse()
-        self.sample_def = sample_def
-        self.success_def = success_def
+        self.metric = metric
 
-    def estimate_samples(self):
-        '''Get the expected number of samples per day'''
-        logger.debug('Gathering expected samples per day\n\n{}\n\n'.format(self.sample_def))
-        samples_per_day_df = self.db.query(self.sample_def)
-        samples_per_day_df.rename(columns = {samples_per_day_df.columns[0]:'samples_per_day'}, inplace = True)
-        self.sample_est = samples_per_day_df.samples_per_day.values[0]
-
-    def estimate_successes(self):
-        '''Get the expected number of successes per day'''
-        logger.debug('Gathering expected successes per day\n\n{}\n\n'.format(self.success_def))
-        successes_per_day_df = self.db.query(self.success_def)
-        successes_per_day_df.rename(columns = {successes_per_day_df.columns[0]:'successes_per_day'}, inplace = True)
-        self.success_est = successes_per_day_df.successes_per_day.values[0]
+    def fetch_successes_and_samples(self):
+        '''Get the expected number of successes and samples per day'''
+        logger.debug('Gathering expected successes and samples per day\n\n{}\n\n'.format(self.metric))
+        df = self.db.query(self.metric)
+        df.rename(columns = {df.columns[0]:'samples_per_day', df.columns[1]:'successes_per_day'}, inplace = True)
+        self.sample_est = df.samples_per_day.values[0]
+        self.success_est = df.successes_per_day.values[0]
 
     def simulate_data(self, days):
         '''Create a dataset with the expected number of 

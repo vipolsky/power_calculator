@@ -27,11 +27,13 @@ class base:
                     {0} days worth of samples =\t{1}
                     Absolute delta =\t\t{2}
                     Significance =\t\t{3}%\n
-                    {4}% power\n'''.format(
+                    Expected difference =\t\t{4}
+                    {5}% power\n'''.format(
                         int((nA+self.nB)/self.samples_per_day),
                         int(nA+self.nB), 
                         self.delta, 
-                        int((1-self.alpha)*100), 
+                        int((1-self.alpha)*100),
+                        self.pB-self.pA,
                         round(power*100, 1)
                         )
                     )
@@ -48,10 +50,12 @@ class base:
                     Significance =\t{0}%
                     Absolute delta =\t{1}
                     Power =\t\t{2}%\n
-                    {3} samples total, {4} days\n'''.format(
+                    Expected Difference =\t{3}
+                    {4} samples total, {5} days\n'''.format(
                         int((1-self.alpha)*100), 
                         self.delta, 
-                        round(self.power*100, 1), 
+                        round(self.power*100, 1),
+                        self.pB-self.pA,
                         int(samples+self.kappa*samples),
                         int((samples+self.kappa*samples)/self.samples_per_day)
                         )
