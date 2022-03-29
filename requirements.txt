@@ -6,7 +6,7 @@ cryptography==2.7
 joblib==0.13.2
 numpy==1.17.0
 pandas==0.25.0
-paramiko==2.6.0
+paramiko==2.10.1
 psycopg2-binary==2.8.3
 pycparser==2.19
 PyMySQL==0.9.3
